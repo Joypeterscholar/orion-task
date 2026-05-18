@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>My Orion Task — GitHub Actions</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:       #0a0c10;
+    --surface:  #111318;
+    --border:   #1e2330;
+    --accent:   #2dba6e;
+    --accent2:  #4a9eff;
+    --warn:     #f5a623;
+    --text:     #e8ecf0;
+    --muted:    #6b7280;
+    --dim:      #1a1f2b;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID NOISE BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(45,186,110,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45,186,110,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── LAYOUT ── */
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: rgba(10,12,16,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .nav-logo .orion-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(1.4); }
+  }
+  .nav-links { display: flex; gap: 24px; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none; font-size: 12px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding-top: 80px;
+  }
+  .hero-eyebrow {
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    display: block; width: 32px; height: 1px;
+    background: var(--accent);
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(42px, 8vw, 88px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero-sub {
+    font-size: 14px; color: var(--muted);
+    max-width: 520px; line-height: 1.8;
+    margin-bottom: 48px;
+  }
+
+  /* Pipeline visual */
+  .pipeline {
+    display: flex; align-items: center; gap: 0;
+    margin-bottom: 64px;
+    flex-wrap: wrap; gap: 0;
+  }
+  .pipe-step {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+    font-size: 11px; letter-spacing: 0.05em;
+    animation: slideIn 0.5s ease both;
+  }
+  .pipe-step:first-child { border-radius: 6px 0 0 6px; }
+  .pipe-step:last-child  { border-radius: 0 6px 6px 0; }
+  .pipe-step .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+  .dot-green  { background: var(--accent);  box-shadow: 0 0 6px var(--accent); }
+  .dot-blue   { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+  .dot-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn); }
+  .pipe-arrow {
+    width: 28px; height: 1px;
+    background: linear-gradient(90deg, var(--border), var(--accent));
+    position: relative;
+  }
+  .pipe-arrow::after {
+    content: '▶';
+    position: absolute; right: -6px; top: -6px;
+    font-size: 10px; color: var(--accent);
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .pipe-step:nth-child(1) { animation-delay: 0.1s; }
+  .pipe-step:nth-child(3) { animation-delay: 0.3s; }
+  .pipe-step:nth-child(5) { animation-delay: 0.5s; }
+  .pipe-step:nth-child(7) { animation-delay: 0.7s; }
+  .pipe-step:nth-child(9) { animation-delay: 0.9s; }
+
+  /* scroll cue */
+  .scroll-cue {
+    font-size: 11px; color: var(--muted); letter-spacing: 0.1em;
+    text-transform: uppercase; display: flex; align-items: center; gap: 8px;
+    animation: bounce 2s infinite;
+  }
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(6px); }
+  }
+
+  /* ── SECTION BASE ── */
+  section { padding: 96px 0; border-top: 1px solid var(--border); }
+
+  .section-label {
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-label .num { color: var(--accent); font-weight: 500; }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 800; letter-spacing: -1px;
+    margin-bottom: 48px;
+    line-height: 1.1;
+  }
+  .section-title em { font-style: normal; color: var(--accent); }
+
+  /* ── TASK 1: HOW GIT ACTIONS WORK ── */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 48px;
+  }
+  .step-card {
+    background: var(--surface);
+    padding: 32px 28px;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .step-card:hover { background: var(--dim); }
+  .step-num {
+    font-size: 48px; font-weight: 800;
+    color: var(--border); font-family: 'Syne', sans-serif;
+    line-height: 1; margin-bottom: 16px;
+    transition: color 0.2s;
+  }
+  .step-card:hover .step-num { color: var(--accent); }
+  .step-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px; font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .step-card p { font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .step-icon { font-size: 22px; margin-bottom: 12px; }
+
+  /* Code block */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  .code-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; color: var(--muted);
+  }
+  .code-header .file { color: var(--accent2); }
+  .code-dots { display: flex; gap: 6px; }
+  .code-dots span {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .code-dots span:nth-child(1) { background: #ff5f57; }
+  .code-dots span:nth-child(2) { background: #febc2e; }
+  .code-dots span:nth-child(3) { background: #28c840; }
+  pre {
+    padding: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.9;
+    overflow-x: auto;
+    color: #cdd9e5;
+  }
+  .kw  { color: #f97583; }
+  .str { color: #9ecbff; }
+  .cm  { color: #444d56; font-style: italic; }
+  .nm  { color: var(--accent); }
+  .val { color: var(--warn); }
+
+  /* ── TASK 2: RAILWAY VS AWS ── */
+  .compare-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+    background: var(--border); border-radius: 12px;
+    border: 1px solid var(--border); overflow: hidden;
+    margin-bottom: 48px;
+  }
+  .compare-col { background: var(--surface); padding: 0; }
+  .compare-head {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .compare-head .logo-pill {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 14px;
+    padding: 4px 12px; border-radius: 20px;
+  }
+  .railway-pill { background: rgba(136,80,255,0.15); color: #a78bfa; border: 1px solid rgba(136,80,255,0.3); }
+  .aws-pill     { background: rgba(245,166,35,0.12);  color: var(--warn); border: 1px solid rgba(245,166,35,0.25); }
+  .compare-body { padding: 0; }
+  .compare-row {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .compare-row:last-child { border-bottom: none; }
+  .compare-row:hover { background: var(--dim); }
+  .compare-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+  .compare-row-text h4 { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+  .compare-row-text p  { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  .verdict-bar {
+    background: var(--dim);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px 28px;
+    display: flex; align-items: flex-start; gap: 16px;
+  }
+  .verdict-bar .v-icon { font-size: 24px; flex-shrink: 0; }
+  .verdict-bar h4 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .verdict-bar p  { font-size: 13px; color: var(--muted); }
+
+  /* ── TASK 3: SANITRACK ── */
+  .sanitrack-hero {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .sanitrack-screen {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: linear-gradient(135deg, #0a0f1a 0%, #0f1923 40%, #091420 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .sanitrack-screen::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 50%, rgba(74,158,255,0.08) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(74,158,255,0.03) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(74,158,255,0.03) 40px);
+  }
+  /* Floating orbs */
+  .sanitrack-screen::after {
+    content: '';
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(45,186,110,0.06) 0%, transparent 70%);
+    bottom: -80px; right: -60px;
+    pointer-events: none;
+  }
+  .screen-play {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    position: relative; z-index: 2;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    backdrop-filter: blur(6px);
+  }
+  .screen-play:hover { background: rgba(45,186,110,0.2); transform: scale(1.08); }
+  .screen-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(18px, 3vw, 28px);
+    font-weight: 800; letter-spacing: -0.5px;
+    margin-top: 20px; margin-bottom: 6px;
+    position: relative; z-index: 2;
+    text-align: center;
+  }
+  .screen-sub {
+    font-size: 12px; color: var(--muted);
+    position: relative; z-index: 2;
+    letter-spacing: 0.05em;
+  }
+  .screen-tags {
+    display: flex; gap: 8px; margin-top: 16px;
+    position: relative; z-index: 2;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .stag {
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 20px;
+  }
+  .stag-g { background: rgba(45,186,110,0.12); color: var(--accent); border: 1px solid rgba(45,186,110,0.25); }
+  .stag-b { background: rgba(74,158,255,0.10); color: var(--accent2); border: 1px solid rgba(74,158,255,0.2); }
+  .stag-w { background: rgba(245,166,35,0.10); color: var(--warn); border: 1px solid rgba(245,166,35,0.2); }
+
+  /* Progress bar */
+  .video-controls {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .progress-bar {
+    width: 100%; height: 3px;
+    background: var(--border); border-radius: 2px;
+    overflow: hidden; cursor: pointer;
+  }
+  .progress-fill {
+    height: 100%; width: 38%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    animation: progress-anim 6s ease-in-out infinite alternate;
+  }
+  @keyframes progress-anim {
+    from { width: 20%; }
+    to   { width: 72%; }
+  }
+  .ctrl-row {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; color: var(--muted);
+  }
+  .ctrl-left { display: flex; align-items: center; gap: 14px; }
+  .ctrl-btn { cursor: pointer; transition: color 0.15s; }
+  .ctrl-btn:hover { color: var(--accent); }
+
+  /* Playlist */
+  .playlist {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .pl-item {
+    background: var(--surface);
+    padding: 18px 20px;
+    display: flex; align-items: flex-start; gap: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .pl-item:hover { background: var(--dim); }
+  .pl-item.active { background: rgba(45,186,110,0.06); }
+  .pl-item.active::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--accent);
+  }
+  .pl-num {
+    font-size: 20px; font-weight: 800; font-family: 'Syne', sans-serif;
+    color: var(--border); min-width: 28px; line-height: 1;
+    transition: color 0.15s;
+  }
+  .pl-item:hover .pl-num,
+  .pl-item.active .pl-num { color: var(--accent); }
+  .pl-info h4 { font-size: 12px; font-weight: 500; margin-bottom: 4px; line-height: 1.4; }
+  .pl-info p  { font-size: 11px; color: var(--muted); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 0;
+    text-align: center;
+  }
+  .footer-logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px; font-weight: 800;
+    letter-spacing: -0.5px; margin-bottom: 8px;
+  }
+  .footer-logo span { color: var(--accent); }
+  .footer-sub { font-size: 12px; color: var(--muted); }
+
+  /* status badge */
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(45,186,110,0.1);
+    border: 1px solid rgba(45,186,110,0.25);
+    color: var(--accent);
+    font-size: 11px; letter-spacing: 0.05em;
+    padding: 4px 12px; border-radius: 20px;
+    margin-bottom: 24px;
+  }
+  .badge .blink {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.5s infinite;
+  }
+
+  /* ── WORKFLOW DIAGRAM ── */
+  .workflow-diagram {
+    display: flex; flex-direction: column; gap: 0;
+    margin-bottom: 32px;
+    position: relative;
+  }
+  .workflow-diagram::before {
+    content: '';
+    position: absolute; left: 20px; top: 0; bottom: 0;
+    width: 1px; background: var(--border);
+    z-index: 0;
+  }
+  .wf-node {
+    display: flex; align-items: flex-start; gap: 20px;
+    padding: 20px 0;
+    position: relative;
+    z-index: 1;
+  }
+  .wf-icon-wrap {
+    width: 40px; height: 40px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .wf-icon-wrap.green { background: rgba(45,186,110,0.1); border-color: rgba(45,186,110,0.3); }
+  .wf-icon-wrap.blue  { background: rgba(74,158,255,0.1); border-color: rgba(74,158,255,0.3); }
+  .wf-icon-wrap.warn  { background: rgba(245,166,35,0.1); border-color: rgba(245,166,35,0.3); }
+  .wf-content h4 { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .wf-content p  { font-size: 12px; color: var(--muted); }
+
+  /* responsive */
+  @media (max-width: 640px) {
+    .compare-grid   { grid-template-columns: 1fr; }
+    .task3-layout   { grid-template-columns: 1fr; }
+    .pipeline       { gap: 4px; }
+    .pipe-arrow     { display: none; }
+    .pipe-step      { border-radius: 6px !important; }
+    nav .nav-links  { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="orion-dot"></div>
+    ORION TASK
+  </div>
+  <div class="nav-links">
+    <a href="#task1">Git Actions</a>
+    <a href="#task2">Railway vs AWS</a>
+    <a href="#task3">Sanitrack</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="wrap">
+  <section class="hero" style="border:none;">
+    <div class="badge"><span class="blink"></span> GitHub Actions Demo Project</div>
+    <div class="hero-eyebrow">My Orion Task</div>
+    <h1>Automate.<br/><span>Ship.</span> Repeat.</h1>
+    <p class="hero-sub">
+      A structured exploration of CI/CD with GitHub Actions — covering pipeline fundamentals, infrastructure decisions, and continuous learning through Sanitrack.
+    </p>
+
+    <!-- Pipeline visual -->
+    <div class="pipeline">
+      <div class="pipe-step"><span class="dot dot-green"></span> push</div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step"><span class="dot dot-blue"></span> trigger</div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step"><span class="dot dot-yellow"></span> build</div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step"><span class="dot dot-blue"></span> test</div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step"><span class="dot dot-green"></span> deploy</div>
+    </div>
+
+    <div class="scroll-cue">↓ &nbsp; Explore tasks</div>
+  </section>
+</div>
+
+<!-- ══════════ TASK 1 ══════════ -->
+<div class="wrap">
+  <section id="task1">
+    <div class="section-label"><span class="num">01</span> Task One</div>
+    <div class="section-title">How <em>GitHub Actions</em><br/>actually work</div>
+
+    <!-- Steps -->
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-icon">📁</div>
+        <div class="step-num">01</div>
+        <h3>The Workflow File</h3>
+        <p>Everything starts with a YAML file placed in <code>.github/workflows/</code>. This file defines triggers, jobs, and steps. GitHub reads it automatically on every matching event.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-icon">⚡</div>
+        <div class="step-num">02</div>
+        <h3>Triggers (on:)</h3>
+        <p>Workflows fire on events — <code>push</code>, <code>pull_request</code>, <code>schedule</code>, or manual dispatch. You control exactly what kicks off the pipeline.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-icon">🏃</div>
+        <div class="step-num">03</div>
+        <h3>Runners</h3>
+        <p>Jobs run on virtual machines called Runners. GitHub provides Ubuntu, macOS, and Windows runners. They're fresh, isolated environments spun up per job.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-icon">🔗</div>
+        <div class="step-num">04</div>
+        <h3>Jobs & Steps</h3>
+        <p>A workflow contains jobs (parallel by default). Each job has sequential steps — shell commands or pre-built Actions from the marketplace.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-icon">📦</div>
+        <div class="step-num">05</div>
+        <h3>Actions &amp; Marketplace</h3>
+        <p>Reusable units of work. Use <code>uses: actions/checkout@v4</code> to check out code, or pick from thousands of community Actions on the GitHub Marketplace.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-icon">🚀</div>
+        <div class="step-num">06</div>
+        <h3>Secrets &amp; Deploy</h3>
+        <p>Store tokens and keys as encrypted Secrets in your repo settings. Reference them as <code>${{ secrets.MY_KEY }}</code> to deploy securely without exposing credentials.</p>
+      </div>
+    </div>
+
+    <!-- Workflow diagram -->
+    <div class="workflow-diagram">
+      <div class="wf-node">
+        <div class="wf-icon-wrap green">📤</div>
+        <div class="wf-content">
+          <h4>Developer pushes code</h4>
+          <p>A <code>git push</code> to the main branch fires the <code>push</code> event trigger on GitHub.</p>
+        </div>
+      </div>
+      <div class="wf-node">
+        <div class="wf-icon-wrap blue">🔍</div>
+        <div class="wf-content">
+          <h4>GitHub reads workflow YAML</h4>
+          <p>The platform parses <code>.github/workflows/ci.yml</code> and determines which jobs to schedule.</p>
+        </div>
+      </div>
+      <div class="wf-node">
+        <div class="wf-icon-wrap warn">🏗️</div>
+        <div class="wf-content">
+          <h4>Runner is provisioned</h4>
+          <p>A fresh virtual machine spins up with the specified OS. The repo is checked out automatically.</p>
+        </div>
+      </div>
+      <div class="wf-node">
+        <div class="wf-icon-wrap blue">🧪</div>
+        <div class="wf-content">
+          <h4>Steps execute sequentially</h4>
+          <p>Install dependencies → run linter → run tests → build artifact. Each step reports pass or fail.</p>
+        </div>
+      </div>
+      <div class="wf-node">
+        <div class="wf-icon-wrap green">✅</div>
+        <div class="wf-content">
+          <h4>Deploy on success</h4>
+          <p>If all steps pass, the final deploy step pushes to production. Failure stops the pipeline and notifies the team.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code block -->
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <span class="file">.github/workflows/ci.yml</span>
+        <span>GitHub Actions Workflow</span>
+      </div>
+      <pre><span class="cm"># My Orion Task — CI/CD Pipeline</span>
+
+<span class="kw">name</span>: <span class="str">Orion CI Pipeline</span>
+
+<span class="kw">on</span>:
+  <span class="nm">push</span>:
+    <span class="kw">branches</span>: [<span class="str">"main"</span>]
+  <span class="nm">pull_request</span>:
+    <span class="kw">branches</span>: [<span class="str">"main"</span>]
+
+<span class="kw">jobs</span>:
+  <span class="nm">build-and-test</span>:
+    <span class="kw">runs-on</span>: <span class="str">ubuntu-latest</span>
+
+    <span class="kw">steps</span>:
+      - <span class="kw">name</span>: <span class="str">Checkout code</span>
+        <span class="kw">uses</span>: <span class="val">actions/checkout@v4</span>
+
+      - <span class="kw">name</span>: <span class="str">Set up Node.js</span>
+        <span class="kw">uses</span>: <span class="val">actions/setup-node@v4</span>
+        <span class="kw">with</span>:
+          <span class="nm">node-version</span>: <span class="str">"20"</span>
+
+      - <span class="kw">name</span>: <span class="str">Install dependencies</span>
+        <span class="kw">run</span>: npm ci
+
+      - <span class="kw">name</span>: <span class="str">Run tests</span>
+        <span class="kw">run</span>: npm test
+
+  <span class="nm">deploy</span>:
+    <span class="kw">needs</span>: build-and-test
+    <span class="kw">runs-on</span>: <span class="str">ubuntu-latest</span>
+    <span class="kw">if</span>: github.ref == <span class="str">'refs/heads/main'</span>
+
+    <span class="kw">steps</span>:
+      - <span class="kw">name</span>: <span class="str">Deploy to production</span>
+        <span class="kw">env</span>:
+          <span class="nm">DEPLOY_TOKEN</span>: <span class="val">${{ secrets.DEPLOY_TOKEN }}</span>
+        <span class="kw">run</span>: <span class="str">./scripts/deploy.sh</span></pre>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════ TASK 2 ══════════ -->
+<div class="wrap">
+  <section id="task2">
+    <div class="section-label"><span class="num">02</span> Task Two</div>
+    <div class="section-title"><em>Railway</em> vs<br/>Amazon Web Services</div>
+
+    <div class="compare-grid">
+      <!-- Railway -->
+      <div class="compare-col">
+        <div class="compare-head">
+          <span class="logo-pill railway-pill">Railway</span>
+          <span style="font-size:12px;color:var(--muted)">Developer-first PaaS</span>
+        </div>
+        <div class="compare-body">
+          <div class="compare-row">
+            <div class="compare-icon">🎯</div>
+            <div class="compare-row-text">
+              <h4>Target User</h4>
+              <p>Indie devs, startups, side-projects. Built so developers can ship without ops knowledge.</p>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-icon">⚙️</div>
+            <div class="compare-row-text">
+              <h4>Setup Complexity</h4>
+              <p>Connect GitHub repo → done. Zero config deployments. Auto-detects your stack.</p>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-icon">💰</div>
+            <div class="compare-row-text">
+              <h4>Pricing Model</h4>
+              <p>Usage-based. Free tier available. Scales with what you consume — simple and transparent.</p>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-icon">🌍</div>
+            <div class="compare-row-text">
+              <h4>Infrastructure Control</h4>
+              <p>Managed abstraction. You don't pick regions, VPCs, or load balancers — Railway handles it.</p>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-icon">📊</div>
+            <div class="compare-row-text">
+              <h4>Scalability</h4>
+              <p>Great for small-to-medium scale. Not designed for massive enterprise workloads.</p>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-icon">🔌</div>
+            <div class="compare-row-text">
+              <h4>GitHub Actions Integration</h4>
+              <p>Native — deploy from Actions using the Railway CLI or official Action with one step.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AWS -->
+      <div class="compare-col">
+        <div class="compare-head">
+          <span class="logo-pill aws-pill">AWS</span>
+          <span style="font-size:12px;color:var(--muted)">Enterprise Cloud Platform</span>
+        </div>
+        <div class="compare-body">
+          <div class="compare-row">
+            <div class="compare-icon">🏢</div>
+            <div class="compare-row-text">
+              <h4>Target User</h4>
+              <p>Enterprise teams, large-scale SaaS, orgs needing compliance, fine control, and global reach.</p>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-icon">🧩</div>
+            <div class="compare-row-text">
+              <h4>Setup Complexity</h4>
+              <p>Steep learning curve. IAM, VPCs, Security Groups, Load Balancers — extensive configuration required.</p>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-icon">💳</div>
+            <div class="compare-row-text">
+              <h4>Pricing Model</h4>
+              <p>Pay-as-you-go with hundreds of services. Costs can surprise — requires billing monitoring and budgets.</p>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-icon">🌐</div>
+            <div class="compare-row-text">
+              <h4>Infrastructure Control</h4>
+              <p>Full control. 200+ services. Pick regions, AZs, instance types, networking, storage — everything.</p>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-icon">📈</div>
+            <div class="compare-row-text">
+              <h4>Scalability</h4>
+              <p>Virtually unlimited. Powers Netflix, Airbnb, NASA. Handles any scale with proper architecture.</p>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-icon">🔌</div>
+            <div class="compare-row-text">
+              <h4>GitHub Actions Integration</h4>
+              <p>Via OIDC or access keys. Deploy to EC2, ECS, Lambda, S3 — official AWS actions available.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="verdict-bar">
+      <div class="v-icon">⚖️</div>
+      <div>
+        <h4>When to choose which</h4>
+        <p>
+          <strong style="color:var(--text)">Railway</strong> — perfect for getting a project live fast with zero ops overhead. Ideal for MVPs, demos, and developer tools where shipping speed beats infrastructure control.<br/>
+          <strong style="color:var(--text)">AWS</strong> — the right choice when you need global scale, compliance requirements, fine-grained security, or deep integrations across a complex stack. Worth the complexity at scale.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════ TASK 3 ══════════ -->
+<div class="wrap">
+  <section id="task3">
+    <div class="section-label"><span class="num">03</span> Task Three</div>
+    <div class="section-title">Watch more<br/><em>Sanitrack</em> videos</div>
+
+    <!-- Full-width video player -->
+    <div class="sanitrack-hero">
+      <div class="sanitrack-screen">
+        <div class="screen-play">▶</div>
+        <div class="screen-title">Sanitrack Video Series</div>
+        <div class="screen-sub">Continuous Learning · Workflow Automation · Technical Deep Dives</div>
+        <div class="screen-tags">
+          <span class="stag stag-g">Learning</span>
+          <span class="stag stag-b">Automation</span>
+          <span class="stag stag-w">Tracking</span>
+          <span class="stag stag-b">CI/CD</span>
+        </div>
+      </div>
+      <div class="video-controls">
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <div class="ctrl-row">
+          <div class="ctrl-left">
+            <span class="ctrl-btn">⏮</span>
+            <span class="ctrl-btn">⏸</span>
+            <span class="ctrl-btn">⏭</span>
+            <span style="color:var(--text)">Episode 3 — GitHub Actions &amp; Sanitrack</span>
+          </div>
+          <div>
+            <span class="ctrl-btn">🔊</span>
+            &nbsp;&nbsp;
+            <span class="ctrl-btn">⛶ Fullscreen</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Playlist grid -->
+    <div class="playlist">
+      <div class="pl-item">
+        <div class="pl-num">01</div>
+        <div class="pl-info">
+          <h4>Introduction to Sanitrack</h4>
+          <p>Overview &amp; setup · 14 min</p>
+        </div>
+      </div>
+      <div class="pl-item">
+        <div class="pl-num">02</div>
+        <div class="pl-info">
+          <h4>Workflow Fundamentals</h4>
+          <p>Core tracking concepts · 22 min</p>
+        </div>
+      </div>
+      <div class="pl-item active">
+        <div class="pl-num">03</div>
+        <div class="pl-info">
+          <h4>GitHub Actions &amp; Sanitrack</h4>
+          <p>CI/CD integration · 31 min</p>
+        </div>
+      </div>
+      <div class="pl-item">
+        <div class="pl-num">04</div>
+        <div class="pl-info">
+          <h4>Automating the Learning Loop</h4>
+          <p>Scheduled reminders · 18 min</p>
+        </div>
+      </div>
+      <div class="pl-item">
+        <div class="pl-num">05</div>
+        <div class="pl-info">
+          <h4>Advanced Tracking Patterns</h4>
+          <p>LEARNING.md &amp; logs · 27 min</p>
+        </div>
+      </div>
+      <div class="pl-item">
+        <div class="pl-num">06</div>
+        <div class="pl-info">
+          <h4>Deploy &amp; Track Together</h4>
+          <p>End-to-end walkthrough · 35 min</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="footer-logo">ORION <span>TASK</span></div>
+    <div class="footer-sub">Demonstrating GitHub Actions · Built with intention · CI/CD Pipeline Project</div>
+  </div>
+</footer>
+
+</body>
+</html>
